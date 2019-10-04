@@ -13,47 +13,27 @@ We also load all of our images.
 let canvas;
 let ctx;
 
-canvas = document.createElement("canvas");
+canvas = document.getElementById('myCanvas');
 ctx = canvas.getContext("2d");
 canvas.width = 512;
 canvas.height = 480;
-document.body.appendChild(canvas);
+// document.body.appendChild(canvas);
 
-let bgReady, heroReady, monsterReady, princessReady;
-let bgImage, heroImage, monsterImage, princessImage;
+let bgReady, heroReady, monsterReady, princessReady, rockReady;
+let bgImage, heroImage, monsterImage, princessImage, rockImage;
+
+let rockX = Math.ceil(Math.random() * (canvas.width - 54) + 54) - 35;
+let rockY = Math.ceil(Math.random() * (canvas.height - 64) + 64) - 64;
 
 let startTime = Date.now();
-const SECONDS_PER_ROUND = 30;
+const SECONDS_PER_ROUND = 90;
 let elapsedTime = 0;
 
-let isMonsterHitWallX = false;
-let isMonsterHitWallY = false;
-
-let isMonsterMoveLeft = false;
-let isMonsterMoveUp = false;
-
-let isPrincessHitWallX = false;
-let isPrincessHitWallY = false;
-
-let isPrincessMoveLeft = false;
-let isPrincessMoveUp = false;
-
-let applicationState = {
+let applicationState = JSON.parse(localStorage.getItem('monsterchasing1')) || {
   isGameOver : false,
   highScore : {},
   highScoreList : []
 };
-
-// let applicationState = {
-//   isGameOver : false,
-//   highScore : {user : "Hai", score : 1},
-//   highScoreList : [
-//     {user : "Hai", score : 9999},
-//     {user : "Minh", score : 999},
-//     {user : "Tan", score : 99},
-//     {user : "Pig", score : 9},
-//   ]
-// }
 
 function loadImages() {
   bgImage = new Image();
@@ -62,6 +42,14 @@ function loadImages() {
     bgReady = true;
   };
   bgImage.src = "images/background.png";
+
+  rockImage = new Image();
+  rockImage.onload = function () {
+    // show the rock image
+    rockReady = true;
+  };
+  rockImage.src = "images/rock.png";
+
   heroImage = new Image();
   heroImage.onload = function () {
     // show the hero image
@@ -130,16 +118,11 @@ chars.monster.Y = Math.ceil(Math.random() * (canvas.height - 64) + 64) - 64;
 chars.princess.X = Math.ceil(Math.random() * (canvas.width - 54) + 54) - 35;
 chars.princess.Y = Math.ceil(Math.random() * (canvas.height - 64) + 64) - 64;
 
-// let heroX = canvas.width / 2;
-// let heroY = canvas.height / 2;
-
-// let monsterX = Math.ceil(Math.random() * (canvas.width - 54) + 54) - 35;
-// let monsterY = Math.ceil(Math.random() * (canvas.height - 64) + 64) - 64;
-
-// let princessX = Math.ceil(Math.random() * (canvas.width - 54) + 54) - 35;
-// let princessY = Math.ceil(Math.random() * (canvas.height - 64) + 64) - 64;
-
 let caughtNum = 0;
+
+// let obstacles {
+//   rock {X,Y}
+// }
 
 /** 
  * Keyboard Listeners
@@ -171,23 +154,36 @@ let update = function () {
   // Update the time.
   elapsedTime = Math.floor((Date.now() - startTime) / 1000);
 
-
-  if (38 in keysDown) { // Player is holding up key
-    chars.hero.Y -= 5;
-  }
-  if (40 in keysDown) { // Player is holding down key
-    chars.hero.Y += 5;
-  }
-  if (37 in keysDown) { // Player is holding left key
-    chars.hero.X -= 5;
-  }
-  if (39 in keysDown) { // Player is holding right key
-    chars.hero.X += 5;
-  }
+  //control the hero base on key press
+  controlHero();
 
   // Move player back when he is off screen - X axis
+  wrapAround();
+  
+  updateScore();
+
+  // checking if monster hit the wall then chnage the hiWall value
+  checkIfHitWall('monster');
+
+  //If monster hit wall, change direction; if not, continue on his path
+  hitWall('monster', 'X');
+  hitWall('monster', 'Y');
+
+  // chase('hero', 'monster')
+
+  hitObstacleYet('hero', 'rock')
+
+  // checking if princess hit the wall then chnage the hiWall value
+  checkIfHitWall('princess');
+
+  //If princess hit wall, change direction; if not, continue on her path
+  hitWall('princess', 'X');
+  hitWall('princess', 'Y');
+};
+
+function wrapAround() {
   if (chars.hero.X > (canvas.width - 10)){
-    chars.hero.X = 0 + 3;
+    chars.hero.X = 3;
   }
 
   if (chars.hero.X < 2){
@@ -196,128 +192,157 @@ let update = function () {
 
   // Move player back when he is off screen - Y axis
   if (chars.hero.Y > (canvas.height - 10)){
-    chars.hero.Y = 0 + 3;
+    chars.hero.Y = 3;
   }
 
   if (chars.hero.Y < 2){
     chars.hero.Y = canvas.height - 10;
   }
+}
 
-  // Check if player and monster collided. Our images
-  // are about 32 pixels big.
-  let hasCaughtMonster = (chars.hero.X <= (chars.monster.X + 32)
-  && chars.monster.X <= (chars.hero.X + 32)
-  && chars.hero.Y <= (chars.monster.Y + 32)
-  && chars.monster.Y <= (chars.hero.Y + 32));
-  
-  let hasCaughtPrincess = (chars.monster.X <= (chars.princess.X + 22)
-  && chars.princess.X <= (chars.monster.X + 22)
-  && chars.monster.Y <= (chars.princess.Y + 32)
-  && chars.princess.Y <= (chars.monster.Y + 32));
-  
-  if (hasCaughtMonster) {
+function controlHero() {
+  let distanceToObstacleY = chars.hero.Y - (rockY+5);
+  let distanceToObstacleX = chars.hero.X - (rockX+5);
+
+  if (38 in keysDown) { // Player is holding up key
+    if ((Math.abs(distanceToObstacleY)) < 20 && (Math.abs(distanceToObstacleX)) < 30 && distanceToObstacleY > 0) {
+      } else {chars.hero.Y -= chars.hero.speed;}
+  }
+  if (40 in keysDown) { // Player is holding down key
+    if ((Math.abs(distanceToObstacleY)) < 30 && (Math.abs(distanceToObstacleX)) < 30 && distanceToObstacleY < 0) {
+    } else {chars.hero.Y += chars.hero.speed;}
+  }
+  if (37 in keysDown) { // Player is holding left key
+    if ((Math.abs(distanceToObstacleX)) < 27 && (Math.abs(distanceToObstacleY)) < 30 && distanceToObstacleX > 0) {
+    } else {chars.hero.X -= chars.hero.speed;}
+  }
+  if (39 in keysDown) { // Player is holding right key
+    if ((Math.abs(distanceToObstacleX)) < 37 && (Math.abs(distanceToObstacleY)) < 10 && distanceToObstacleX < 0) {
+    } else {chars.hero.X += chars.hero.speed;}
+  }
+}
+
+function isBlock(char, obstacle) {
+  let distanceToObstacleY = chars[char].Y - (obs[obstacle].Y+5);
+  let distanceToObstacleX = chars[char].X - (obs[obstacle].X+5);
+  // I do this to adjust for the picture size and the way it's rendered
+  if ((Math.abs(distanceToObstacleY)) < 20 && (Math.abs(distanceToObstacleX)) < 30 && distanceToObstacleY > 0) {return 'B';} //hit the bottom
+  if ((Math.abs(distanceToObstacleY)) < 30 && (Math.abs(distanceToObstacleX)) < 30 && distanceToObstacleY < 0) {return 'T';} //hit the top
+  if ((Math.abs(distanceToObstacleX)) < 27 && (Math.abs(distanceToObstacleY)) < 30 && distanceToObstacleX > 0) {return 'R';} //hit the right 
+  if ((Math.abs(distanceToObstacleX)) < 37 && (Math.abs(distanceToObstacleY)) < 10 && distanceToObstacleX < 0) {return 'L';} //hit the left
+}
+
+function updateScore() {
+  if (hasCaught('hero', 'monster')) {
     // Update caught number
     caughtNum += 1;
     // Pick a new location for the monster randomly.
     chars.monster.X = Math.ceil(Math.random() * (canvas.width - 54) + 54) - 35;
     chars.monster.Y = Math.ceil(Math.random() * (canvas.height - 64) + 64) - 64;
-  } else {}
+  }
 
-  if (hasCaughtPrincess) {
-    // Update caught number
+  if (hasCaught('monster', 'princess')) {
+    // Deduct the score;
     caughtNum -= 1;
     // Pick a new location for the monster randomly.
     chars.princess.X = Math.ceil(Math.random() * (canvas.width - 54) + 54) - 35;
     chars.princess.Y = Math.ceil(Math.random() * (canvas.height - 64) + 64) - 64;
-  } else {}
-  
-
-  // checking if monster hit the wall 
-  if (chars.monster.X > (canvas.width - 10) || chars.monster.X < 10){
-    chars.monster.hitWall.X = true;
   }
+}
 
-  if (chars.monster.Y > (canvas.height - 10) || chars.monster.Y < 10){
-    chars.monster.hitWall.Y = true;
+function checkIfHitWall(char) {
+  if (chars[char].X > (canvas.width - 10) || chars[char].X < 10){
+    chars[char].hitWall.X = true;
   }
-
-  //If monster hit wall, change direction; if not, continue on his path - X axis
-  if (!chars.monster.hitWall.X) {
-    if (isMonsterMoveLeft) {
-      monsterMoveLeft();
-    } else {monsterMoveRight()};
-  } else if (isMonsterMoveLeft) {
-    monsterMoveRight();
-  } else {
-    monsterMoveLeft();
-  };
-  chars.monster.hitWall.X = false;
-
-  //If monster hit wall, change direction; if not, continue on his path - Y axis
-  if (!chars.monster.hitWall.Y) {
-    if (isMonsterMoveUp) {
-      monsterMoveUp();
-    } else {monsterMoveDown()};
-  } else if (isMonsterMoveUp) {
-    monsterMoveDown();
-  } else {
-    monsterMoveUp();
-  };
-  chars.monster.hitWall.Y = false;
-
-  // checking if princess hit the wall 
-  if (chars.princess.X > (canvas.width - 10) || chars.princess.X < 10){
-    isPrincessHitWallX = true;
+  if (chars[char].Y > (canvas.height - 10) || chars[char].Y < 10){
+    chars[char].hitWall.Y = true;
   }
+}
 
-  if (chars.princess.Y > (canvas.height - 10) || chars.princess.Y < 10){
-    isPrincessHitWallY = true;
+//this function check if the characters hit walls or not then change their direction base on their original direction
+function hitWall(char, axis){
+  if (axis == 'X') {
+    if (!chars[char].hitWall.X) {
+      if (chars[char].moveLeft) {
+        move(char, 'left');
+      } else {move(char, 'right')};
+    } else if (chars[char].moveLeft) {
+      move(char, 'right');
+    } else {
+      move(char, 'left');
+    };
+    chars[char].hitWall.X = false;
+  } else if (axis == 'Y') {
+    if (!chars[char].hitWall.Y) {
+      if (chars[char].moveUp) {
+        move(char, 'up');
+      } else {move(char, 'down')};
+    } else if (chars[char].moveUp) {
+      move(char, 'down');
+    } else {
+      move(char, 'up');
+    };
+    chars[char].hitWall.Y = false;
   }
-
-  //If princess hit wall, change direction; if not, continue on her path - X axis
-  if (!isPrincessHitWallX) {
-    if (isPrincessMoveLeft) {
-      princessMoveLeft();
-    } else {princessMoveRight()};
-  } else if (isPrincessMoveLeft) {
-    princessMoveRight();
-  } else {
-    princessMoveLeft();
-  };
-  isPrincessHitWallX = false;
-
-  //If princess hit wall, change direction; if not, continue on her path - Y axis
-  if (!isPrincessHitWallY) {
-    if (isPrincessMoveUp) {
-      princessMoveUp();
-    } else {princessMoveDown()};
-  } else if (isPrincessMoveUp) {
-    princessMoveDown();
-  } else {
-    princessMoveUp();
-  };
-  isPrincessHitWallY = false;
-};
+}
 
 //functions for moving characters
-function moveLeft(char){
-  chars.char.X -= chars.char.speed;
-  chars.char.moveLeft = true;
+function move(char, direction){
+  if (direction == 'left') {
+    chars[char].X -= chars[char].speed;
+    chars[char].moveLeft = true;
+  } else if (direction == 'right') {
+    chars[char].X += chars[char].speed;
+    chars[char].moveLeft = false;
+  } else if (direction == 'up') {
+    chars[char].Y -= chars[char].speed;
+    chars[char].moveUp = true;
+  } else if (direction == 'down') {
+    chars[char].Y += chars[char].speed;
+    chars[char].moveUp = false;
+  }
 }
 
-function moveRight(char){
-  chars.char.X -= chars.char.speed;
-  chars.char.moveLeft = false;
+//function for a character chasing another
+function chase(char1, char2) {
+  let distanceX = chars[char2].X - chars[char1].X;
+  let distanceY = chars[char2].Y - chars[char1].Y;
+  
+  if (distanceX > 0) {
+    chars[char1].X += chars[char1].speed;
+    chars[char1].moveLeft = true;
+  } else if (distanceX < 0) {
+    chars[char1].X -= chars[char1].speed;
+    chars[char1].moveLeft = false;
+  };
+
+  if (distanceY > 0) {
+    chars[char1].Y += chars[char1].speed;
+    chars[char1].moveUp = false;
+  } else if (distanceY < 0) {
+    chars[char1].Y -= chars[char1].speed;
+    chars[char1].moveUp = true;
+  };
 }
 
-function moveDown(char){
-  chars.char.X -= chars.char.speed;
-  chars.char.moveUp = false;
+//check if user hit the obstacle
+function hitObstacleYet(char) {
+  if (chars[char].X <= (rockX + 20)
+  && rockX <= (chars[char].X + 20)
+  && chars[char].Y <= (rockY + 20)
+  && rockY <= (chars[char].Y + 20)) {
+    return true;
+  } else return false;
 }
 
-function moveUp(char){
-  chars.char.X -= chars.char.speed;
-  chars.char.moveUp = true;
+//check if 2 characters touching each other
+function hasCaught(char1, char2) {
+  if (chars[char1].X <= (chars[char2].X + 32)
+  && chars[char2].X <= (chars[char1].X + 32)
+  && chars[char1].Y <= (chars[char2].Y + 32)
+  && chars[char2].Y <= (chars[char1].Y + 32)) {
+    return true;
+  } else return false;
 }
 
 /**
@@ -327,6 +352,9 @@ const render = function () {
   if (bgReady) {
     ctx.drawImage(bgImage, 0, 0);
   }
+  if (rockReady) {
+    ctx.drawImage(rockImage, rockX, rockY+10);
+  }
   if (heroReady) {
     ctx.drawImage(heroImage, chars.hero.X, chars.hero.Y);
   }
@@ -335,32 +363,39 @@ const render = function () {
   }
 
   if (princessReady) {
-    ctx.drawImage(princessImage, chars.princessX, chars.princessY);
+    ctx.drawImage(princessImage, chars.princess.X, chars.princess.Y);
   }
 
   ctx.font = "20px Georgia";
-  ctx.strokeText(`${SECONDS_PER_ROUND - elapsedTime}`, 10, 20);
+  ctx.strokeText(`${SECONDS_PER_ROUND - elapsedTime}`, 10, 30);
   ctx.strokeText(`Score: ${caughtNum}`, 10, 460);
-  ctx.strokeText(`Best:`, 460, 25)
-  ctx.strokeText(`${applicationState.highScore.user} - ${applicationState.highScore.score}`, 430, 50);
+  ctx.strokeText(`Best: ${applicationState.highScore.user} : ${applicationState.highScore.score}`, 180, 30)
 };
 
 //checking if applicationState > isGameOver is true then do a series of steps.
 function GameEnd() {
-  if (elapsedTime >= 30) {
+  if (elapsedTime >= SECONDS_PER_ROUND) {
     applicationState.isGameOver = true;
-    if (caughtNum >= applicationState.highScore.score) {
-      applicationState.highScore.user = prompt('You have the highest scrore, please enter your name:');
-      applicationState.highScore.score = caughtNum;
-      applicationState.highScore.date = new Date();
-      applicationState.highScoreList.unshift(applicationState.highScore);
-      localStorage.setItem('monsterchasing1', JSON.stringify(applicationState));
-    } else {alert('GAME OVER!');}
+    if (!updateHighscore()) {
+      alert('GAME OVER!');
+    }
     return true;
   } else {
     return false;
   }
 }
+
+function updateHighscore() {
+  if (caughtNum >= applicationState.highScore.score) {
+    applicationState.highScore.user = prompt('You have the highest scrore, please enter your name:');
+    if (!applicationState.highScore.user) {applicationState.highScore.user = 'Anonymous'};
+    applicationState.highScore.score = caughtNum;
+    applicationState.highScore.date = new Date();
+    applicationState.highScoreList.unshift(applicationState.highScore);
+    localStorage.setItem('monsterchasing1', JSON.stringify(applicationState));
+    return true;
+  } else return false;
+} 
 
 
 /**
@@ -372,26 +407,35 @@ const main = function () {
   // checking the number of monster has been caught reached 20 yet or the elapsedTime reach 30 yet, if it's there, end the game.
   if (GameEnd()){
     render();
-    return;
-  }
-  update(); 
-  render();
-  
-  // Request to do this again ASAP. This is a special method
-  // for web browsers. 
-  requestAnimationFrame(main);
-};
+    move('hero', 'left');
+  } else {
+    update(); 
+    render();
+    
+    // Request to do this again ASAP. This is a special method
+    // for web browsers. 
+    requestAnimationFrame(main);
+  };
+}
 
 //refresh or start a new game
 function newGame() {
-  applicationState = JSON.parse(localStorage.getItem('monsterchasing1'));
+  getAppState();  
   applicationState.isGameOver = false;
 }
 
 function refresh() {
   window.location.href = window.location.href;
-  applicationState = JSON.parse(localStorage.getItem('monsterchasing1'));
+  getAppState();
   applicationState.isGameOver = false;
+}
+
+function getAppState() {
+  applicationState = JSON.parse(localStorage.getItem('monsterchasing1')) || {
+    isGameOver : false,
+    highScore : { user : "no-one-yet", score: 0},
+    highScoreList : []
+  };
 }
 
 // Cross-browser support for requestAnimationFrame.

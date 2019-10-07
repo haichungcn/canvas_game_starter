@@ -2,45 +2,97 @@
 <html lang="en">
 
 <head>
-  <meta charset="utf-8">
-  <meta property="og:title" content="Monster Catch - Crazy Addictive">
-  <meta property="og:description" content="Single player game. Get the best score you can in the allowed time.">
-  <meta property="og:image" content="./images/preview.jpg">
-  <meta property="og:url" content="./images/preview.jpg">
+    <meta charset="utf-8" />
+    <title>Best Game Ever!</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.11.2/css/all.css" />
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.11.2/css/v4-shims.css" />
+    <link rel="stylesheet" href="css/style.css" />
+</head>
 
-  <title>Best Game Ever!</title>
-  <!-- Bootstrap CSS -->
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
-    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.11.2/css/all.css">
-  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.11.2/css/v4-shims.css">
-  <link rel="stylesheet" href="css/style.css">
+<head>
+    <meta charset="utf-8">
+    <meta property="og:title" content="Monster Catch - Crazy Addictive">
+    <meta property="og:description" content="Single player game. Get the best score you can in the allowed time.">
+    <meta property="og:image" content="./images/preview.jpg">
+    <meta property="og:url" content="./images/preview.jpg">
+
+    <title>Best Game Ever!</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.11.2/css/all.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.11.2/css/v4-shims.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body onload="newGame()">
-  <main class="container">
-    <div class="row container">
-      <div id="menu" class="col-md-3">
-        <button id="newgamebtn" onclick="refresh()">NEW GAME</button>
-      </div>
-      <div id="gamefield" class="col-md-6">
-        <canvas id="myCanvas" width="600" height="500" class="py-3"></canvas>
-      </div>
-    </div>
-  </main>
+    <main class="container-fluid d-flex flex-row justify-content-start">
+        <div class="row container">
+            <div id="menu" class="col-md-3 d-flex flex-column justify-content-end pb-4">
+                <button class="btn btn-outline-warning" id="newgamebtn" onclick="refresh()">
+                    NEW GAME
+                </button>
+                <button class="btn btn-outline-warning mt-2" id="highScores" data-toggle="modal"
+                    data-target="#exampleModalCenter" onclick="">
+                    HIGHSCORES
+                </button>
+                <button class="btn btn-outline-warning mt-2" id="mute" onclick="muteSound()">
+                    MUTE
+                </button>
+            </div>
+            <div id="gamefield" class="col-md-6">
+                <canvas id="myCanvas" width="600" height="500" class="py-3"></canvas>
+            </div>
+        </div>
+    </main>
 
-  
-  <script src="game.js"></script>
-  <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
-    integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
-    crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
-    integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
-    crossorigin="anonymous"></script>
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
-    integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
-    crossorigin="anonymous"></script>
+    <!-- Modal -->
+    <div class="modal fade" id="exampleModalCenter" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-info">
+                        Highest scores in the history:
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div id="highscoreArea" class="modal-body text-warning text-bold text-center">
+                    ...
+                </div>
+                <div class="modal-footer  align-text-center">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <audio src="sound/bgmusic.mp3" id="bgMusic" type="audio/mp3" autoplay loop></audio>
+    <audio src="sound/victory.mp3" id="victory" type="audio/mp3"></audio>
+    <audio id="moveAudio1">
+        <source src="sound/footsteps1a.ogg" type="audio/ogg" />
+        Your browser does not support the audio element.
+    </audio>
+    <audio src="sound/footsteps1b.ogg" id="moveAudio2" type="audio/ogg"></audio>
+    <audio src="sound/sword.wav" id="hitAudio" type="audio/wav"></audio>
+
+    <script src="game.js"></script>
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
 </body>
 
 </html>

@@ -14,22 +14,51 @@ let ctx;
 
 canvas = document.getElementById("myCanvas");
 ctx = canvas.getContext("2d");
-canvas.width = 512;
-canvas.height = 480;
+canvas.width = 614;
+canvas.height = 576;
 // document.body.appendChild(canvas);
+
+//center pixel
+const center = [(canvas.width - 30) / 2, (canvas.height - 40) / 2];
 
 let bgReady, heroReady, monsterReady, princessReady, rockReady;
 let bgImage, heroImage, monsterImage, princessImage, rockImage;
+const bgImageList = [
+    "images/background-md.png",
+    "images/background-md2.png",
+    "images/background-md3.png",
+    "images/background-md4.png"
+];
+
+const obstacleImageList = ["images/brock.png", "images/tree.png"];
+
+const heroImageList = ["images/hero.png", "images/hero2.png"];
+
+const monsterImageList = [
+    "images/monster.png",
+    "images/monster2.png",
+    "images/monster3.png"
+];
+
+let highscoreArea = document.getElementById("highscoreArea");
+
+let bgMusic = document.getElementById("bgMusic");
+let moveAudio1 = document.getElementById("moveAudio1");
+let moveAudio2 = document.getElementById("moveAudio2");
+let hitAudio = document.getElementById("hitAudio");
+let victory = document.getElementById("victory");
+bgMusic.volume = 0.4;
+hitAudio.volume = 0.5;
+moveAudio1.volume = 0.5;
+moveAudio2.volume = 0.5;
+moveAudio1.play();
+moveAudio2.play();
 
 let startTime = Date.now();
-const SECONDS_PER_ROUND = 100;
+const SECONDS_PER_ROUND = 30;
 let elapsedTime = 0;
 
-let applicationState = JSON.parse(localStorage.getItem("monsterchasing1")) || {
-    isGameOver: false,
-    highScore: {},
-    highScoreList: []
-};
+let applicationState = {};
 
 function loadImages() {
     bgImage = new Image();
@@ -37,28 +66,31 @@ function loadImages() {
         // show the background image
         bgReady = true;
     };
-    bgImage.src = "images/background.png";
+
+    bgImage.src = bgImageList[Math.floor(Math.random() * bgImageList.length)];
 
     rockImage = new Image();
     rockImage.onload = function() {
         // show the rock image
         rockReady = true;
     };
-    rockImage.src = "images/rock.png";
+    rockImage.src =
+        obstacleImageList[Math.floor(Math.random() * obstacleImageList.length)];
 
     heroImage = new Image();
     heroImage.onload = function() {
         // show the hero image
         heroReady = true;
     };
-    heroImage.src = "images/hero.png";
+    heroImage.src = "image/hero.png";
 
     monsterImage = new Image();
     monsterImage.onload = function() {
         // show the monster image
         monsterReady = true;
     };
-    monsterImage.src = "images/monster.png";
+    monsterImage.src =
+        monsterImageList[Math.floor(Math.random() * monsterImageList.length)];
 
     princessImage = new Image();
     princessImage.onload = function() {
@@ -88,7 +120,11 @@ let chars = {
         hitWall: { X: false, Y: false },
         moveLeft: false,
         moveUp: false,
-        speed: 5
+        speed: 7,
+        height: 38,
+        width: 34,
+        strike: false,
+        jump: false
     },
     monster: {
         X: 0,
@@ -96,7 +132,9 @@ let chars = {
         hitWall: { X: false, Y: false },
         moveLeft: false,
         moveUp: false,
-        speed: 3
+        speed: 2,
+        height: 35,
+        width: 32
     },
     princess: {
         X: 0,
@@ -104,7 +142,9 @@ let chars = {
         hitWall: { X: false, Y: false },
         moveLeft: false,
         moveUp: false,
-        speed: 5
+        speed: 5,
+        height: 48,
+        width: 32
     }
 };
 
@@ -150,8 +190,10 @@ let obstacles = [];
 function createObstacles(num) {
     for (let i = 0; i < num; i++) {
         obstacles.push({
-            X: Math.ceil(Math.random() * (canvas.width - 54) + 54) - 35,
-            Y: Math.ceil(Math.random() * (canvas.height - 64) + 64) - 64
+            X: Math.ceil(Math.random() * (canvas.width - 20) + 20) - 10,
+            Y: Math.ceil(Math.random() * (canvas.height - 64) + 64) - 64,
+            height: 30,
+            width: 30
         });
     }
 }
@@ -172,14 +214,11 @@ let update = function() {
     // Move player back when he is off screen - X axis
     wrapAround();
 
-    updateScore();
-
     // checking if monster hit the wall then chnage the hiWall value
-    checkIfHitWall("monster");
 
     //If monster hit wall, change direction; if not, continue on his path
-    // hitWall("monster", "X");
-    // hitWall("monster", "Y");
+    // avoidObstacles("monster", "X");
+    // avoidObstacles("monster", "Y");
 
     // chase("hero", "princess");
 
@@ -187,54 +226,76 @@ let update = function() {
     // hitObstacleYet("hero", "rock");
 
     // checking if princess hit the wall then chnage the hiWall value
-    checkIfHitWall("princess");
 
     //If princess hit wall, change direction; if not, continue on her path
-    hitWall("princess", "X");
-    hitWall("princess", "Y");
+    avoidObstacles("princess", "X");
+    avoidObstacles("princess", "Y");
+
+    updateScore();
+    chars.hero.strike = false;
 };
 
 function wrapAround() {
-    if (chars.hero.X > canvas.width - 10) {
-        chars.hero.X = 3;
+    if (chars.hero.X >= canvas.width - 10) {
+        chars.hero.X = 1;
     }
 
-    if (chars.hero.X < 2) {
-        chars.hero.X = canvas.width - 10;
+    if (chars.hero.X <= 0) {
+        chars.hero.X = canvas.width - chars.hero.width + 3;
     }
 
     // Move player back when he is off screen - Y axis
     if (chars.hero.Y > canvas.height - 10) {
-        chars.hero.Y = 3;
+        chars.hero.Y = 1;
     }
 
-    if (chars.hero.Y < 2) {
+    if (chars.hero.Y <= 0) {
         chars.hero.Y = canvas.height - 10;
     }
 }
 
 function controlHero() {
+    heroImage.src = "images/hero-strike.png";
+
     // Player is holding up key
     let isBlockedResult = obstacles.map(val => isBlocked("hero", val));
     isBlockedResult = isBlockedResult.some(val => typeof val == "string");
 
     if (38 in keysDown && isBlockedResult !== "B") {
         chars.hero.Y -= chars.hero.speed;
+        if (moveAudio1.ended) moveAudio1.play();
+        heroStrike();
         return;
     }
     // Player is holding down key
     if (40 in keysDown && isBlockedResult !== "T") {
         chars.hero.Y += chars.hero.speed;
+        if (moveAudio1.ended) moveAudio1.play();
+        heroStrike();
         return;
     }
     // Player is holding left key
     if (37 in keysDown && isBlockedResult !== "R") {
         chars.hero.X -= chars.hero.speed;
+        if (moveAudio1.ended) moveAudio2.play();
+        heroStrike();
         return;
     }
     // Player is holding right key
     if (39 in keysDown && isBlockedResult !== "L") {
         chars.hero.X += chars.hero.speed;
+        if (moveAudio1.ended) moveAudio2.play();
+        heroStrike();
+        return;
+    }
+    heroStrike();
+}
+
+function heroStrike() {
+    if (32 in keysDown) {
+        heroImage.src = "images/hero.png";
+        chars.hero.strike = true;
+        hitAudio.play();
         return;
     }
 }
@@ -277,39 +338,24 @@ function isBlocked(char, obstacle) {
     } //hit the left
 }
 
-function updateScore() {
-    if (hasCaught("hero", "monster")) {
-        // Update caught number
-        caughtNum += 1;
-        // Pick a new location for the monster randomly.
-        chars.monster.X =
-            Math.ceil(Math.random() * (canvas.width - 54) + 54) - 35;
-        chars.monster.Y =
-            Math.ceil(Math.random() * (canvas.height - 64) + 64) - 64;
-    }
-
-    if (hasCaught("monster", "princess")) {
-        // Deduct the score;
-        caughtNum -= 1;
-        // Pick a new location for the monster randomly.
-        chars.princess.X =
-            Math.ceil(Math.random() * (canvas.width - 54) + 54) - 35;
-        chars.princess.Y =
-            Math.ceil(Math.random() * (canvas.height - 64) + 64) - 64;
-    }
-}
-
+//these function check if the characters hit walls and obstacles or not then change their direction base on their original direction
 function checkIfHitWall(char) {
-    if (chars[char].X > canvas.width - 10 || chars[char].X < 10) {
+    if (
+        chars[char].X + chars[char].width >= canvas.width ||
+        chars[char].X <= 0
+    ) {
         chars[char].hitWall.X = true;
     }
-    if (chars[char].Y > canvas.height - 10 || chars[char].Y < 10) {
+    if (
+        chars[char].Y + chars[char].height >= canvas.height ||
+        chars[char].Y <= 0
+    ) {
         chars[char].hitWall.Y = true;
     }
 }
 
-//this function check if the characters hit walls or not then change their direction base on their original direction
-function hitWall(char, axis) {
+function avoidObstacles(char, axis) {
+    checkIfHitWall(char);
     let isBlockedResult = obstacles.map(val => isBlocked(char, val));
     isBlockedResult = isBlockedResult.find(val => typeof val == "string");
 
@@ -381,26 +427,101 @@ function chase(char1, char2) {
     }
 }
 
-//check if user hit the obstacle
-// function hitObstacleYet(char) {
-//     if (
-//         chars[char].X <= rockX + 20 &&
-//         rockX <= chars[char].X + 20 &&
-//         chars[char].Y <= rockY + 20 &&
-//         rockY <= chars[char].Y + 20
-//     ) {
-//         return true;
-//     } else return false;
-// }
-
 //check if 2 characters touching each other
 function hasCaught(char1, char2) {
     if (
-        chars[char1].X <= chars[char2].X + 32 &&
-        chars[char2].X <= chars[char1].X + 32 &&
-        chars[char1].Y <= chars[char2].Y + 32 &&
-        chars[char2].Y <= chars[char1].Y + 32
+        Math.abs(chars[char1].X - chars[char2].X) <= chars[char1].width / 2 &&
+        Math.abs(chars[char1].Y - chars[char2].Y) <= chars[char1].height / 2
     ) {
+        return true;
+    } else return false;
+}
+
+function updateScore() {
+    if (hasCaught("hero", "princess")) {
+        // Update caught number
+        caughtNum += 1;
+        // Pick a new location for the princess randomly.
+        chars.princess.X =
+            Math.ceil(Math.random() * (canvas.width - 54) + 54) - 35;
+        chars.princess.Y =
+            Math.ceil(Math.random() * (canvas.height - 64) + 64) - 64;
+    }
+
+    if (hasCaught("hero", "monster")) {
+        // Update caught number
+        caughtNum += 3;
+        // Pick a new location for the princess randomly.
+        chars.monster.X =
+            Math.ceil(Math.random() * (canvas.width - 54) + 54) - 35;
+        chars.monster.Y =
+            Math.ceil(Math.random() * (canvas.height - 64) + 64) - 64;
+    }
+
+    if (hasCaught("hero", "monster") && chars.hero.strike == true) {
+        // Update caught number
+        caughtNum += 5;
+        // Pick a new location for the princess randomly.
+        chars.monster.X =
+            Math.ceil(Math.random() * (canvas.width - 54) + 54) - 35;
+        chars.monster.Y =
+            Math.ceil(Math.random() * (canvas.height - 64) + 64) - 64;
+    }
+
+    if (hasCaught("monster", "hero") && chars.hero.strike == false) {
+        // Deduct the score;
+        caughtNum -= 1;
+        // Pick a new location for the monster randomly.
+        chars.monster.X =
+            Math.ceil(Math.random() * (canvas.width - 54) + 54) - 35;
+        chars.monster.Y =
+            Math.ceil(Math.random() * (canvas.height - 64) + 64) - 64;
+    }
+
+    if (hasCaught("monster", "princess") && chars.hero.strike == false) {
+        // Deduct the score;
+        caughtNum -= 2;
+        // Pick a new location for the monster randomly.
+        chars.princess.X =
+            Math.ceil(Math.random() * (canvas.width - 54) + 54) - 35;
+        chars.princess.Y =
+            Math.ceil(Math.random() * (canvas.height - 64) + 64) - 64;
+    }
+}
+
+//checking if applicationState > isGameOver is true then do a series of steps.
+function GameEnd() {
+    if (elapsedTime >= SECONDS_PER_ROUND) {
+        applicationState.isGameOver = true;
+        updateHighscore();
+        // if (!updateHighscore()) {
+
+        // }
+        return true;
+    } else {
+        // applicationState.isGameOver = false;
+        return false;
+    }
+}
+
+function updateHighscore() {
+    if (caughtNum >= applicationState.highScore.score) {
+        victory.play();
+        applicationState.highScore.user = prompt(
+            "You have the highest scrore, please enter your name:"
+        );
+        if (!applicationState.highScore.user) {
+            applicationState.highScore.user = "Anonymous";
+        }
+        applicationState.highScore.score = caughtNum;
+        applicationState.highScore.date = new Date();
+        applicationState.isGameOver = false;
+        applicationState.highScoreList.unshift(applicationState.highScore);
+        displayHighscores();
+        localStorage.setItem(
+            "monsterchasing1",
+            JSON.stringify(applicationState)
+        );
         return true;
     } else return false;
 }
@@ -409,6 +530,8 @@ function hasCaught(char1, char2) {
  * This function, render, runs as often as possible.
  */
 const render = function() {
+    // ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     if (bgReady) {
         ctx.drawImage(bgImage, 0, 0);
     }
@@ -428,47 +551,29 @@ const render = function() {
         ctx.drawImage(princessImage, chars.princess.X, chars.princess.Y);
     }
 
+    ctx.font = "30px Georgia";
+    ctx.textAlign = "left";
+    ctx.strokeStyle = "#FFFFFF";
+    ctx.strokeText(`${SECONDS_PER_ROUND - elapsedTime}`, 20, 40);
     ctx.font = "20px Georgia";
-    ctx.strokeText(`${SECONDS_PER_ROUND - elapsedTime}`, 10, 30);
-    ctx.strokeText(`Score: ${caughtNum}`, 10, 460);
+    ctx.strokeText(`Score: ${caughtNum}`, 20, canvas.height - 25);
+    ctx.textAlign = "center";
     ctx.strokeText(
         `Best: ${applicationState.highScore.user} : ${applicationState.highScore.score}`,
-        180,
-        30
+        center[0],
+        35
     );
-};
 
-//checking if applicationState > isGameOver is true then do a series of steps.
-function GameEnd() {
-    if (elapsedTime >= SECONDS_PER_ROUND) {
-        applicationState.isGameOver = true;
-        if (!updateHighscore()) {
-            alert("GAME OVER!");
-        }
-        return true;
-    } else {
-        return false;
+    if (applicationState.isGameOver == true) {
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(center[0] - 80, center[1], 200, 50);
+        ctx.strokeStyle = "#FF0000";
+        ctx.strokeRect(center[0] - 80, center[1], 200, 50);
+        ctx.fillStyle = "#FF0000";
+        ctx.fillText(`GAME OVER`, center[0] + 20, center[1] + 32);
+        applicationState.isGameOver = false;
     }
-}
-
-function updateHighscore() {
-    if (caughtNum >= applicationState.highScore.score) {
-        applicationState.highScore.user = prompt(
-            "You have the highest scrore, please enter your name:"
-        );
-        if (!applicationState.highScore.user) {
-            applicationState.highScore.user = "Anonymous";
-        }
-        applicationState.highScore.score = caughtNum;
-        applicationState.highScore.date = new Date();
-        applicationState.highScoreList.unshift(applicationState.highScore);
-        localStorage.setItem(
-            "monsterchasing1",
-            JSON.stringify(applicationState)
-        );
-        return true;
-    } else return false;
-}
+};
 
 /**
  * The main game loop. Most every game will have two distinct parts:
@@ -482,7 +587,6 @@ const main = function() {
     } else {
         update();
         render();
-
         // Request to do this again ASAP. This is a special method
         // for web browsers.
         requestAnimationFrame(main);
@@ -491,13 +595,13 @@ const main = function() {
 
 //refresh or start a new game
 function newGame() {
-    getAppState();
+    // getAppState();
     applicationState.isGameOver = false;
 }
 
 function refresh() {
     window.location.href = window.location.href;
-    getAppState();
+    // getAppState();
     applicationState.isGameOver = false;
 }
 
@@ -507,6 +611,29 @@ function getAppState() {
         highScore: { user: "no-one-yet", score: 0 },
         highScoreList: []
     };
+    displayHighscores();
+}
+
+function displayHighscores() {
+    applicationState.highScoreList.forEach(
+        val => (highscoreArea.innerHTML = `<p> ${val.user} scored ${val.score}`)
+    );
+}
+
+function muteSound() {
+    if (bgMusic.muted == false) {
+        bgMusic.muted = true;
+        moveAudio1.muted = true;
+        moveAudio2.muted = true;
+        hitAudio.muted = true;
+        victory.muted = true;
+    } else {
+        bgMusic.muted = false;
+        moveAudio1.muted = false;
+        moveAudio2.muted = false;
+        hitAudio.muted = false;
+        victory.muted = false;
+    }
 }
 
 // Cross-browser support for requestAnimationFrame.
@@ -519,7 +646,8 @@ requestAnimationFrame =
     w.mozRequestAnimationFrame;
 
 // Let's play this game!
-createObstacles(5);
+createObstacles(10);
+getAppState();
 loadImages();
 setupKeyboardListeners();
 main();

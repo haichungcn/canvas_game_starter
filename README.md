@@ -4,6 +4,10 @@ Created with love by: Charles Lee Modified by Hai Chung
   
 This is a simple Canvas-based game that requires a solid understanding of the principles of JavaScript programming to customize. 
 
+## Netlify link:
+
+https://brave-knuth-eb47ee.netlify.com
+
 ## Video Walkthrough
 
 Here's a walkthrough of implemented user stories.

@@ -216,7 +216,7 @@ function wrapAround() {
 function controlHero() {
     // Player is holding up key
     let isBlockedResult = obstacles.map(val => isBlocked("hero", val));
-    isBlockedResult = isBlockedResult.find(val => typeof val == "string");
+    isBlockedResult = isBlockedResult.some(val => typeof val == "string");
 
     if (38 in keysDown && isBlockedResult !== "B") {
         chars.hero.Y -= chars.hero.speed;

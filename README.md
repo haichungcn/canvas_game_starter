@@ -50,7 +50,7 @@ The following **additional** features are implemented:
 
 Time spent: uncountable hours spent in total.
 
-Describe any challenges encountered while building the app.
+Describe any  challenges encountered while building the app.
 
 ## License
 

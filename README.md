@@ -27,18 +27,18 @@ This code was reviewed by @username and @otherusername.
 - [x] When the user catches a monster, a new monster is placed randomly upon the screen.
 - [x] The user can see the numbers of monsters she has caught. Every time she catches a monster, the number should increment by one. 
 - [x] The game ends when the user has caught 20 monsters. The total time elapsed is displayed upon game completion, in seconds.
-- [ ] The user can access this game from the internet (e.g. using Netlify).
+- [x] The user can access this game from the internet (e.g. using Netlify).
 - [ ] The code has been reviewed by at least one other person, using Pull Requests on GitHub.
 
 ## Optional User Stories
 
-- [ ] Custom styling: the developer has replaced the images for the main character, monster, and background with something of her choice.  
+- [x] Custom styling: the developer has replaced the images for the main character, monster, and background with something of her choice.  
 - [x] The user cannot move her character off the screen. 
-- [ ] The user sees a few different types of monster each time a new monster is spawned. 
+- [x] The user sees a few different types of monster each time a new monster is spawned. 
 - [x] The monster moves around on its own each frame, and the user must chase it. 
-- [ ] The map has "obstacles", such as trees, which block the user from moving through the space occupied by the obstacle. 
-- [ ] The user can hear sound effects upon movement and upon catching a monster. 
-- [ ] The user hears background music during the game. 
+- [x] The map has "obstacles", such as trees, which block the user from moving through the space occupied by the obstacle. 
+- [x] The user can hear sound effects upon movement and upon catching a monster. 
+- [x] The user hears background music during the game. 
 - [x] The user can see their high score. 
 
 
@@ -48,7 +48,7 @@ The following **additional** features are implemented:
 
 ## Time Spent and Lessons Learned
 
-Time spent: **X** hours spent in total.
+Time spent: uncountable hours spent in total.
 
 Describe any challenges encountered while building the app.
 
